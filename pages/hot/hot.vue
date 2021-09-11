@@ -20,13 +20,20 @@
     4、list可以左右切换 
       通过swiper改造
       问题：
-        ①解决swiper高度问题
+        ①swiper高度问题
+          原因：swiper高度不确定，取决于当前的list有高
+          解决：在list渲染完成后，获取list下所有元素并叠加计算list的高度，
+          swiper动态绑定高度此高度
         ②解决tab切换卡顿问题
+          原因，点击tab切换时，swiper绑定的currentIndex更新，
+          swiper切换动画和获取数据渲染dom同时进行
+          解决：swiper动画完成之后再获取数据渲染dom
     5、list与tabs联动 -->
     <swiper
       class="swiper"
       :current="currentIndex"
       :style="{ height: currentSwiperHeight + 'px' }"
+      @animationfinish="onSwiper"
     >
       <swiper-item
         class="swiper-item"
@@ -79,6 +86,8 @@ export default {
     },
     onTabClick(index) {
       this.currentIndex = index
+    },
+    onSwiper() {
       this.loadHotListFromTab()
     },
     /* 获取列表数据需要做：
