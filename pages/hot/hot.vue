@@ -19,8 +19,15 @@
       hot组件根据切换事件参数index，获取接口数据
     4、list可以左右切换 
       通过swiper改造
+      问题：
+        ①解决swiper高度问题
+        ②解决tab切换卡顿问题
     5、list与tabs联动 -->
-    <swiper class="swiper" :current="currentIndex">
+    <swiper
+      class="swiper"
+      :current="currentIndex"
+      :style="{ height: currentSwiperHeight + 'px' }"
+    >
       <swiper-item
         class="swiper-item"
         v-for="(tabItem, tabIndex) in tabData"
@@ -28,10 +35,11 @@
       >
         <view>
           <!-- 加载动画 -->
-          <uni-load-more status="loading" v-if="isLoading" />
+          <uni-load-more status="loading" v-if="isLoading"></uni-load-more>
           <block v-else>
             <hot-list-item
-              v-for="(item, index) in listData[currentIndex]"
+              :class="'hot-list-item-' + tabIndex"
+              v-for="(item, index) in listData[tabIndex]"
               :key="index"
               :ranking="index + 1"
               :data="item"
@@ -51,7 +59,11 @@ export default {
       tabData: [],
       currentIndex: 0,
       isLoading: false,
-      listData: []
+      listData: [],
+      // 当前swiper-item的高度
+      currentSwiperHeight: 0,
+      // 用于缓存所有swiper-item的高度
+      swiperHeightData: {}
     }
   },
   // 在实例创建完成后被立即调用
@@ -83,7 +95,29 @@ export default {
         const { data: res } = await getHotListFromTabType(id)
         this.listData[this.currentIndex] = res.list
         this.isLoading = false
+        // 渲染完成之后再计算高度
+        setTimeout(async () => {
+          this.currentSwiperHeight = await this.getCurrentSwiperHeight()
+          this.swiperHeightData[this.currentIndex] = this.currentSwiperHeight
+        }, 0)
       }
+    },
+    // 计算当前swiper-item的高度
+    getCurrentSwiperHeight() {
+      return new Promise((resolve) => {
+        let sum = 0
+        const query = uni.createSelectorQuery().in(this)
+        query
+          .selectAll(`.hot-list-item-${this.currentIndex}`)
+          // res为节点(子节点)的布局位置信息
+          .boundingClientRect((res) => {
+            res.forEach((item) => {
+              sum += item.height
+            })
+            resolve(sum)
+          })
+          .exec()
+      })
     }
   }
 }
@@ -99,6 +133,17 @@ export default {
   .search-box {
     padding: 0 16px;
     margin-bottom: $uni-spacing-col-base;
+  }
+  .tab-sticky {
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 99;
+    /* #ifndef H5 */
+    top: 0;
+    /* #endif */
+    /* #ifdef H5 */
+    top: 44px;
+    /* #endif */
   }
 }
 </style>
